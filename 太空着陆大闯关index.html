@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>太空着陆大闯关</title>
+  <style>
+    /* 基础舞台：按 16:9 设计，兼顾教室一体机和平板横屏 */
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      color: #fff;
+      background: #070622;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 16% 18%, rgba(255, 128, 42, .18), transparent 18%),
+        radial-gradient(circle at 78% 28%, rgba(74, 195, 255, .20), transparent 22%),
+        linear-gradient(135deg, #06071f 0%, #13104a 46%, #2d1058 100%);
+    }
+
+    #game {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-width: 100vw;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #stars {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .nebula {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse at 24% 82%, rgba(255, 181, 75, .18), transparent 30%),
+        radial-gradient(ellipse at 74% 78%, rgba(58, 222, 255, .14), transparent 34%);
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 8.8vh;
+      min-height: 72px;
+      padding: 12px 120px;
+    }
+
+    .title {
+      min-width: min(860px, 70vw);
+      padding: 12px 28px;
+      border: 3px solid #ff9d28;
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(9, 26, 66, .86), rgba(22, 13, 57, .76));
+      box-shadow: 0 0 18px rgba(255, 157, 40, .55), inset 0 0 20px rgba(198, 217, 255, .18);
+      color: #fff8dc;
+      text-align: center;
+      font-size: clamp(26px, 2.7vw, 48px);
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .gear {
+      position: absolute;
+      top: 18px;
+      left: 22px;
+      z-index: 8;
+      width: 54px;
+      height: 54px;
+      border: 2px solid rgba(230, 238, 255, .72);
+      border-radius: 50%;
+      color: #ffb347;
+      background: rgba(8, 16, 48, .38);
+      box-shadow: 0 0 14px rgba(255, 157, 40, .35);
+      font-size: 30px;
+      cursor: pointer;
+    }
+
+    .progress-pill {
+      position: absolute;
+      top: 22px;
+      right: 28px;
+      z-index: 4;
+      padding: 10px 18px;
+      border: 2px solid rgba(196, 211, 232, .76);
+      border-radius: 8px;
+      background: rgba(5, 15, 44, .62);
+      color: #dff5ff;
+      font-size: clamp(15px, 1.2vw, 22px);
+      font-weight: 800;
+    }
+
+    #stage {
+      position: relative;
+      z-index: 2;
+      width: min(100vw, 177.78vh);
+      height: min(91.2vh, 56.25vw);
+      margin: 0 auto;
+      overflow: visible;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .start-panel {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      width: min(900px, 78%);
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .start-panel h1 {
+      margin: 0 0 18px;
+      color: #fff6d9;
+      font-size: clamp(48px, 6vw, 96px);
+      line-height: 1.05;
+      text-shadow: 0 0 24px rgba(255, 176, 65, .7), 0 6px 0 rgba(21, 14, 68, .9);
+    }
+
+    .start-panel p {
+      margin: 0 auto 30px;
+      max-width: 820px;
+      color: #d9efff;
+      font-size: clamp(20px, 2vw, 34px);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .primary-btn,
+    .next-btn,
+    .reset-btn,
+    .close-btn {
+      border: 3px solid #e6edf8;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffba45, #ff7e1d);
+      color: #221042;
+      box-shadow: 0 8px 0 #9a3d08, 0 0 22px rgba(255, 157, 40, .62);
+      font-family: inherit;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .primary-btn,
+    .next-btn {
+      padding: 18px 36px;
+      font-size: clamp(24px, 2.4vw, 42px);
+    }
+
+    .primary-btn:active,
+    .next-btn:active,
+    .reset-btn:active,
+    .close-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 4px 0 #9a3d08, 0 0 18px rgba(255, 157, 40, .52);
+    }
+
+    .hud-note {
+      position: absolute;
+      left: 3%;
+      bottom: 2%;
+      max-width: 48%;
+      padding: 12px 16px;
+      border-left: 6px solid #ff9d28;
+      background: rgba(6, 18, 54, .58);
+      color: #d9f4ff;
+      font-size: clamp(14px, 1.25vw, 22px);
+      line-height: 1.45;
+    }
+
+    /* 团团：右下角 CSS 熊猫宇航员 */
+    .tuantuan-wrap {
+      position: fixed;
+      right: 24px;
+      bottom: 18px;
+      z-index: 7;
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      max-width: min(660px, 48vw);
+      pointer-events: none;
+    }
+
+    .speech {
+      position: relative;
+      max-width: 440px;
+      min-height: 86px;
+      padding: 16px 18px;
+      border: 3px solid #ff9d28;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .94);
+      color: #171644;
+      box-shadow: 0 0 22px rgba(255, 157, 40, .42);
+      font-size: clamp(16px, 1.35vw, 24px);
+      line-height: 1.38;
+      font-weight: 800;
+    }
+
+    .speech::after {
+      content: "";
+      position: absolute;
+      right: -18px;
+      bottom: 28px;
+      border-width: 12px 0 12px 18px;
+      border-style: solid;
+      border-color: transparent transparent transparent rgba(255, 255, 255, .94);
+    }
+
+    .panda {
+      position: relative;
+      width: clamp(116px, 10vw, 176px);
+      height: clamp(150px, 13vw, 230px);
+      filter: drop-shadow(0 0 18px rgba(120, 214, 255, .45));
+    }
+
+    .panda-body {
+      position: absolute;
+      left: 18%;
+      bottom: 0;
+      width: 64%;
+      height: 48%;
+      border: 3px solid #cfd7e6;
+      border-radius: 35% 35% 18% 18%;
+      background: linear-gradient(145deg, #ffffff, #cfd6e6);
+      box-shadow: inset 0 0 18px rgba(88, 115, 150, .35);
+    }
+
+    .panda-body::before {
+      content: "团团";
+      position: absolute;
+      left: 20%;
+      top: 26%;
+      width: 60%;
+      padding: 3px 0;
+      border: 2px solid #aeb8cd;
+      border-radius: 6px;
+      color: #2b2b3d;
+      background: #f8f8ff;
+      font-weight: 900;
+      text-align: center;
+      font-size: clamp(12px, .95vw, 18px);
+    }
+
+    .panda-head {
+      position: absolute;
+      left: 7%;
+      top: 2%;
+      width: 86%;
+      height: 62%;
+      border: 5px solid rgba(225, 233, 248, .95);
+      border-radius: 46% 46% 40% 40%;
+      background: rgba(185, 229, 255, .26);
+      box-shadow: inset 0 0 18px rgba(70, 189, 255, .36), 0 0 0 5px rgba(55, 69, 103, .72);
+    }
+
+    .panda-head::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      top: 9%;
+      width: 22%;
+      height: 14%;
+      border-radius: 45%;
+      background: rgba(255, 255, 255, .7);
+      transform: rotate(-24deg);
+    }
+
+    .ear {
+      position: absolute;
+      top: -1%;
+      width: 26%;
+      height: 25%;
+      border-radius: 50%;
+      background: #141323;
+      z-index: -1;
+    }
+
+    .ear.left { left: 5%; }
+    .ear.right { right: 5%; }
+
+    .face {
+      position: absolute;
+      left: 12%;
+      top: 22%;
+      width: 76%;
+      height: 62%;
+      border-radius: 48%;
+      background: #fff9f2;
+    }
+
+    .patch {
+      position: absolute;
+      top: 30%;
+      width: 26%;
+      height: 30%;
+      border-radius: 48%;
+      background: #12111d;
+    }
+
+    .patch.left {
+      left: 21%;
+      transform: rotate(18deg);
+    }
+
+    .patch.right {
+      right: 21%;
+      transform: rotate(-18deg);
+    }
+
+    .eye {
+      position: absolute;
+      top: 39%;
+      width: 8%;
+      height: 8%;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: inset 1px 1px 0 #0a0910;
+      animation: blink 4.5s infinite;
+    }
+
+    .eye.left { left: 31%; }
+    .eye.right { right: 31%; }
+
+    .nose {
+      position: absolute;
+      left: 46%;
+      top: 58%;
+      width: 8%;
+      height: 6%;
+      border-radius: 50%;
+      background: #1c1721;
+    }
+
+    .mouth {
+      position: absolute;
+      left: 45%;
+      top: 66%;
+      width: 10%;
+      height: 7%;
+      border-bottom: 2px solid #7d3b4a;
+      border-radius: 50%;
+    }
+
+    @keyframes blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      95% { transform: scaleY(.15); }
+    }
+
+    /* 任务倒计时与过关动画 */
+    .mission-overlay,
+    .success-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4, 5, 26, .76);
+      backdrop-filter: blur(4px);
+    }
+
+    .mission-card,
+    .success-card {
+      width: min(980px, 82vw);
+      padding: 42px 46px;
+      border: 4px solid #ff9d28;
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(16, 28, 77, .94), rgba(38, 20, 86, .94));
+      box-shadow: 0 0 44px rgba(255, 157, 40, .56), inset 0 0 32px rgba(211, 229, 255, .18);
+      text-align: center;
+    }
+
+    .mission-card h2,
+    .success-card h2 {
+      margin: 0 0 22px;
+      color: #fff3cc;
+      font-size: clamp(36px, 4.2vw, 72px);
+      line-height: 1.1;
+    }
+
+    .countdown {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: clamp(110px, 10vw, 170px);
+      height: clamp(110px, 10vw, 170px);
+      border: 5px solid #e3ecff;
+      border-radius: 50%;
+      background: rgba(255, 157, 40, .17);
+      color: #ffcf63;
+      font-size: clamp(60px, 7vw, 112px);
+      font-weight: 900;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(.92); box-shadow: 0 0 0 rgba(255, 192, 67, 0); }
+      50% { transform: scale(1.04); box-shadow: 0 0 38px rgba(255, 192, 67, .6); }
+      100% { transform: scale(.92); box-shadow: 0 0 0 rgba(255, 192, 67, 0); }
+    }
+
+    .success-card p {
+      margin: 0 0 24px;
+      color: #d9f6ff;
+      font-size: clamp(22px, 2vw, 34px);
+      font-weight: 800;
+    }
+
+    /* 通用拖拽图形 */
+    .draggable {
+      position: absolute;
+      z-index: 4;
+      width: var(--w, 132px);
+      height: var(--h, 132px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      filter: drop-shadow(0 12px 16px rgba(0, 0, 0, .35));
+      transition: transform .18s ease, filter .18s ease;
+    }
+
+    .draggable:hover {
+      filter: drop-shadow(0 14px 18px rgba(0, 0, 0, .4)) drop-shadow(0 0 14px rgba(255, 255, 255, .25));
+    }
+
+    .draggable.dragging {
+      z-index: 20;
+      cursor: grabbing;
+      transform: scale(1.1) !important;
+      transition: none;
+    }
+
+    .draggable.locked {
+      cursor: default;
+      filter: drop-shadow(0 0 14px rgba(89, 255, 163, .65));
+    }
+
+    .shape-core {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .shape-label {
+      position: absolute;
+      left: 50%;
+      bottom: -32px;
+      transform: translateX(-50%);
+      min-width: 96px;
+      padding: 5px 10px;
+      border: 2px solid rgba(230, 238, 255, .78);
+      border-radius: 8px;
+      background: rgba(9, 20, 54, .82);
+      color: #fff;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .shape-square .shape-core {
+      background: linear-gradient(145deg, #ff6970, #e91b2a);
+      border: 4px solid #ffb4b7;
+      border-radius: 6px;
+    }
+
+    .shape-rectangle .shape-core {
+      background: linear-gradient(145deg, #54c7ff, #1069ee);
+      border: 4px solid #a7e4ff;
+      border-radius: 6px;
+    }
+
+    .shape-circle .shape-core {
+      background: radial-gradient(circle at 34% 26%, #fff7a8, #ffd31f 58%, #e7a900);
+      border: 4px solid #fff3a0;
+      border-radius: 50%;
+    }
+
+    .shape-triangle .shape-core {
+      width: 0;
+      height: 0;
+      border-left: calc(var(--w, 132px) * .5) solid transparent;
+      border-right: calc(var(--w, 132px) * .5) solid transparent;
+      border-bottom: var(--h, 132px) solid #27c95b;
+      filter: drop-shadow(0 0 0 #b8ffd0);
+    }
+
+    .shape-triangle .shape-core::after {
+      content: "";
+      position: absolute;
+      left: calc(var(--w, 132px) * -.42);
+      top: 14px;
+      width: 0;
+      height: 0;
+      border-left: calc(var(--w, 132px) * .42) solid transparent;
+      border-right: calc(var(--w, 132px) * .42) solid transparent;
+      border-bottom: calc(var(--h, 132px) * .82) solid rgba(79, 230, 104, .42);
+    }
+
+    .hint-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,.84);
+      font-size: 22px;
+      font-weight: 900;
+      text-shadow: 0 1px 3px rgba(0,0,0,.45);
+      pointer-events: none;
+    }
+
+    .shape-triangle .hint-text {
+      top: 38%;
+      height: auto;
+    }
+
+    .piece-wing-left .shape-core,
+    .piece-wing-right .shape-core {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: linear-gradient(145deg, #5ff076, #25c85c 70%);
+      filter: none;
+      box-shadow: inset -10px -10px 0 rgba(11, 128, 62, .16), 0 0 0 4px rgba(138, 255, 170, .72);
+    }
+
+    .piece-wing-left .shape-core {
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    }
+
+    .piece-wing-right .shape-core {
+      clip-path: polygon(0 0, 100% 100%, 0 100%);
+    }
+
+    .piece-wing-left .shape-core::after,
+    .piece-wing-right .shape-core::after {
+      content: none;
+    }
+
+    .piece-wing-left .hint-text,
+    .piece-wing-right .hint-text {
+      top: auto;
+      height: 100%;
+      align-items: flex-end;
+      padding-bottom: 22px;
+    }
+
+    .shake {
+      animation: shake .42s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-16px); }
+      40% { transform: translateX(14px); }
+      60% { transform: translateX(-10px); }
+      80% { transform: translateX(8px); }
+    }
+
+    /* 第一关：立体图形和凹槽 */
+    .solid-row {
+      position: absolute;
+      left: 4%;
+      right: 4%;
+      top: 4%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2.2%;
+    }
+
+    .solid-card {
+      position: relative;
+      height: clamp(230px, 19vw, 310px);
+      border: 3px solid rgba(216, 226, 244, .72);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(13, 35, 87, .66), rgba(13, 20, 59, .38));
+      box-shadow: inset 0 0 24px rgba(138, 202, 255, .12);
+    }
+
+    .solid-name {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 88px;
+      text-align: center;
+      color: #e9f6ff;
+      font-size: clamp(18px, 1.6vw, 30px);
+      font-weight: 900;
+    }
+
+    .slot,
+    .rocket-slot {
+      position: absolute;
+      border: 4px dashed rgba(226, 236, 255, .76);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .06);
+      box-shadow: inset 0 0 16px rgba(255, 255, 255, .12);
+    }
+
+    .slot {
+      left: 50%;
+      bottom: 20px;
+      width: clamp(110px, 8vw, 155px);
+      height: clamp(74px, 5.8vw, 108px);
+      transform: translateX(-50%);
+    }
+
+    .slot.ok {
+      border-color: #5cff9c;
+      background: rgba(67, 255, 139, .16);
+      box-shadow: inset 0 0 20px rgba(67, 255, 139, .24), 0 0 18px rgba(67, 255, 139, .48);
+    }
+
+    .slot::after {
+      content: "";
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #66708d;
+      transform: translateY(-50%);
+      box-shadow: 0 0 9px rgba(255, 255, 255, .26);
+    }
+
+    .slot.ok::after {
+      background: #5cff9c;
+      box-shadow: 0 0 16px #5cff9c;
+    }
+
+    .solid {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      transform: translate(-50%, -50%);
+    }
+
+    .cube {
+      width: 210px;
+      height: 190px;
+      background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 220'%3E%3Cpolygon points='32,72 88,20 220,20 170,72' fill='%23ff2d2d'/%3E%3Cpolygon points='170,72 220,20 220,166 170,202' fill='%23c60f18'/%3E%3Cpolygon points='32,72 170,72 170,202 32,202' fill='%23f92727'/%3E%3Cpolyline points='32,72 88,20 220,20 220,166 170,202 32,202 32,72 170,72 220,20' fill='none' stroke='%23000000' stroke-width='9' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cline x1='170' y1='72' x2='170' y2='202' stroke='%23000000' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+      filter: drop-shadow(0 12px 18px rgba(0,0,0,.32));
+      transform: translate(-50%, -54%);
+    }
+
+    .cube::before {
+      content: none;
+    }
+
+    .cube::after {
+      content: none;
+    }
+
+    .cuboid {
+      width: 260px;
+      height: 158px;
+      background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 310 190'%3E%3Cpolygon points='28,62 74,18 286,18 252,62' fill='%23349fec'/%3E%3Cpolygon points='252,62 286,18 286,132 252,172' fill='%23046eb5'/%3E%3Cpolygon points='28,62 252,62 252,172 28,172' fill='%231f8ce2'/%3E%3Cpolyline points='28,62 74,18 286,18 286,132 252,172 28,172 28,62 252,62 286,18' fill='none' stroke='%23041624' stroke-width='6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cline x1='252' y1='62' x2='252' y2='172' stroke='%23041624' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+      filter: drop-shadow(0 12px 18px rgba(0,0,0,.30));
+      transform: translate(-50%, -50%);
+    }
+
+    .cuboid::before {
+      content: none;
+    }
+
+    .cuboid::after {
+      content: none;
+    }
+
+    .cylinder {
+      width: 118px;
+      height: 138px;
+      border-radius: 58px / 22px;
+      background: linear-gradient(90deg, #ffdc42, #fff3a0 45%, #e7a900);
+      box-shadow: inset -16px 0 16px rgba(143, 92, 0, .24), 0 0 0 3px rgba(255,255,255,.7);
+    }
+
+    .cylinder::before,
+    .cylinder::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      width: 118px;
+      height: 42px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fff7b8, #ffd31f 68%, #e7a900);
+      border: 3px solid rgba(255,255,255,.7);
+    }
+
+    .cylinder::before { top: -2px; }
+    .cylinder::after {
+      bottom: -6px;
+      background: rgba(211, 143, 0, .35);
+    }
+
+    .prism {
+      width: 205px;
+      height: 190px;
+      background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 245 220'%3E%3Cpolygon points='44,42 168,72 168,204 44,176' fill='%2347bd54'/%3E%3Cpolygon points='168,72 222,22 222,162 168,204' fill='%231ea143'/%3E%3Cpolygon points='44,42 222,22 168,72' fill='%2329b94c'/%3E%3Cpolyline points='44,42 222,22 222,162 168,204 44,176 44,42 168,72 222,22' fill='none' stroke='%23000000' stroke-width='11' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cline x1='168' y1='72' x2='168' y2='204' stroke='%23000000' stroke-width='11' stroke-linecap='round'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+      filter: drop-shadow(0 12px 18px rgba(0,0,0,.28));
+      transform: translate(-50%, -54%);
+    }
+
+    .prism::before {
+      content: none;
+    }
+
+    .prism::after {
+      content: none;
+    }
+
+    .piece-bank {
+      position: absolute;
+      left: 3.5%;
+      right: 3.5%;
+      bottom: 10%;
+      height: 18%;
+      border: 3px solid rgba(255, 157, 40, .72);
+      border-radius: 8px;
+      background: rgba(6, 18, 54, .46);
+      box-shadow: inset 0 0 24px rgba(255, 157, 40, .12);
+    }
+
+    /* 第二关 */
+    .doors {
+      position: absolute;
+      left: 4%;
+      right: 4%;
+      top: 10%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2%;
+    }
+
+    .door {
+      position: relative;
+      height: clamp(185px, 16vw, 270px);
+      border: 5px solid var(--c);
+      border-radius: 22px 22px 8px 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.10), transparent 35%),
+        rgba(7, 22, 62, .66);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--c), transparent 35%), inset 0 0 22px rgba(255,255,255,.12);
+    }
+
+    .door::before {
+      content: "";
+      position: absolute;
+      inset: 20px;
+      border: 2px solid rgba(255,255,255,.22);
+      border-radius: 18px 18px 8px 8px;
+    }
+
+    .door.flash {
+      animation: doorFlash .45s ease;
+    }
+
+    @keyframes doorFlash {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); filter: brightness(1.8); }
+    }
+
+    .door-title {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 38%;
+      text-align: center;
+      color: #fff;
+      font-size: clamp(22px, 2vw, 38px);
+      font-weight: 900;
+      text-shadow: 0 2px 4px rgba(0,0,0,.55);
+    }
+
+    .class-progress {
+      position: absolute;
+      left: 50%;
+      top: 39%;
+      width: min(720px, 58%);
+      height: 30px;
+      transform: translateX(-50%);
+      border: 3px solid #e6edf8;
+      border-radius: 8px;
+      background: rgba(6, 18, 54, .74);
+      overflow: hidden;
+    }
+
+    .class-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #5cff9c, #ffcf63);
+      transition: width .35s ease;
+    }
+
+    .class-count {
+      position: absolute;
+      left: 50%;
+      top: calc(39% + 38px);
+      transform: translateX(-50%);
+      color: #fff7cc;
+      font-size: clamp(18px, 1.5vw, 28px);
+      font-weight: 900;
+    }
+
+    /* 第三关 */
+    .puzzle-left {
+      position: absolute;
+      left: 4%;
+      top: 11%;
+      width: 38%;
+      height: 70%;
+      border: 3px solid rgba(255, 157, 40, .72);
+      border-radius: 8px;
+      background: rgba(6, 18, 54, .42);
+    }
+
+    .rocket-area {
+      position: absolute;
+      right: 5%;
+      top: 8%;
+      width: 48%;
+      height: 76%;
+      border-left: 3px solid rgba(230, 238, 255, .35);
+    }
+
+    .rocket-guide {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      width: 360px;
+      height: 620px;
+      transform: translate(-50%, -50%);
+    }
+
+    .rocket-slot {
+      opacity: .85;
+      background: rgba(255,255,255,.05);
+    }
+
+    .rocket-slot.ok {
+      border-style: solid;
+      border-color: rgba(92, 255, 156, .95);
+      background: rgba(92, 255, 156, .14);
+    }
+
+    .slot-nose {
+      left: 105px;
+      top: 0;
+      width: 150px;
+      height: 140px;
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    }
+
+    .slot-body {
+      left: 105px;
+      top: 132px;
+      width: 150px;
+      height: 310px;
+    }
+
+    .slot-window {
+      left: 145px;
+      top: 220px;
+      width: 70px;
+      height: 70px;
+    }
+
+    .slot-wing-left {
+      left: 26px;
+      top: 354px;
+      width: 96px;
+      height: 126px;
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    }
+
+    .slot-wing-right {
+      left: 238px;
+      top: 354px;
+      width: 96px;
+      height: 126px;
+      clip-path: polygon(0 0, 100% 100%, 0 100%);
+    }
+
+    .rocket-colored {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      width: 360px;
+      height: 620px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .rocket-colored.fly {
+      opacity: 1;
+      animation: rocketFly 2.8s ease-in forwards;
+    }
+
+    .rocket-nose {
+      position: absolute;
+      left: 105px;
+      top: 0;
+      width: 150px;
+      height: 140px;
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+      background: linear-gradient(145deg, #ff6970, #e61c2d);
+    }
+
+    .rocket-body {
+      position: absolute;
+      left: 105px;
+      top: 132px;
+      width: 150px;
+      height: 310px;
+      border-radius: 10px 10px 24px 24px;
+      background: linear-gradient(90deg, #ffffff, #d9e2f4 55%, #ffffff);
+      border: 4px solid #c6d4e8;
+    }
+
+    .rocket-window {
+      position: absolute;
+      left: 145px;
+      top: 220px;
+      width: 70px;
+      height: 70px;
+      border: 6px solid #f5f8ff;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #7be2ff, #1974e9);
+    }
+
+    .rocket-wing {
+      position: absolute;
+      top: 354px;
+      width: 96px;
+      height: 126px;
+      background: #27c95b;
+    }
+
+    .rocket-wing.left {
+      left: 26px;
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    }
+
+    .rocket-wing.right {
+      left: 238px;
+      clip-path: polygon(0 0, 100% 100%, 0 100%);
+    }
+
+    .flame {
+      position: absolute;
+      left: 140px;
+      top: 436px;
+      width: 80px;
+      height: 118px;
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+      background: linear-gradient(180deg, #ffef73, #ff7a1d 50%, rgba(255, 49, 29, .2));
+      animation: flame .18s infinite alternate;
+      transform-origin: top;
+    }
+
+    @keyframes flame {
+      from { transform: scaleY(.82); filter: brightness(1); }
+      to { transform: scaleY(1.08); filter: brightness(1.35); }
+    }
+
+    @keyframes rocketFly {
+      0% { transform: translate(-50%, -50%); }
+      28% { transform: translate(-50%, -58%); }
+      100% { transform: translate(-50%, -150vh); }
+    }
+
+    .confetti,
+    .firework {
+      position: fixed;
+      z-index: 11;
+      pointer-events: none;
+    }
+
+    .confetti {
+      width: 12px;
+      height: 22px;
+      background: var(--c);
+      animation: confetti 2.4s ease-out forwards;
+    }
+
+    @keyframes confetti {
+      to {
+        transform: translate(var(--dx), 110vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    .firework {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c);
+      box-shadow: 0 0 16px var(--c);
+      animation: firework .9s ease-out forwards;
+    }
+
+    @keyframes firework {
+      to {
+        transform: translate(var(--dx), var(--dy)) scale(.3);
+        opacity: 0;
+      }
+    }
+
+    /* 教师后台 */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2, 4, 20, .72);
+    }
+
+    .modal-panel {
+      width: min(760px, 88vw);
+      padding: 28px;
+      border: 4px solid #ff9d28;
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(12, 26, 72, .97), rgba(33, 20, 79, .97));
+      box-shadow: 0 0 34px rgba(255, 157, 40, .48);
+    }
+
+    .modal-panel h2 {
+      margin: 0 0 18px;
+      color: #fff3cc;
+      font-size: 36px;
+    }
+
+    .data-grid {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 16px;
+      border: 2px solid rgba(230, 238, 255, .32);
+      border-radius: 8px;
+      background: rgba(255,255,255,.07);
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .reset-btn,
+    .close-btn {
+      padding: 12px 18px;
+      font-size: 20px;
+    }
+
+    .close-btn {
+      background: linear-gradient(180deg, #dfe9ff, #aebed8);
+      box-shadow: 0 7px 0 #5c6981, 0 0 18px rgba(255,255,255,.25);
+    }
+
+    @media (max-width: 900px) {
+      .topbar {
+        padding-left: 82px;
+        padding-right: 88px;
+      }
+
+      .tuantuan-wrap {
+        max-width: 60vw;
+        right: 12px;
+        bottom: 10px;
+      }
+
+      .speech {
+        max-width: 290px;
+        min-height: 70px;
+      }
+
+      .solid-card {
+        height: 210px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <canvas id="stars"></canvas>
+    <div class="nebula"></div>
+    <button class="gear" id="dashboardBtn" aria-label="教师后台">⚙</button>
+    <div class="progress-pill" id="progressPill">准备救援</div>
+    <header class="topbar">
+      <div class="title" id="gameTitle">太空着陆大闯关</div>
+    </header>
+    <main id="stage"></main>
+    <div class="hud-note" id="hudNote">拖动图形完成任务。支持鼠标和触摸屏，适合一体机和平板使用。</div>
+
+    <section class="tuantuan-wrap" aria-live="polite">
+      <div class="speech" id="speechText"></div>
+      <div class="panda" aria-label="AI数字人团团">
+        <div class="panda-body"></div>
+        <div class="panda-head">
+          <span class="ear left"></span>
+          <span class="ear right"></span>
+          <div class="face"></div>
+          <span class="patch left"></span>
+          <span class="patch right"></span>
+          <span class="eye left"></span>
+          <span class="eye right"></span>
+          <span class="nose"></span>
+          <span class="mouth"></span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="mission-overlay hidden" id="missionOverlay">
+    <div class="mission-card">
+      <h2 id="missionTitle"></h2>
+      <div class="countdown" id="countdown">3</div>
+    </div>
+  </div>
+
+  <div class="success-overlay hidden" id="successOverlay">
+    <div class="success-card">
+      <h2 id="successTitle"></h2>
+      <p id="successText"></p>
+      <button class="next-btn" id="nextBtn">前往第二关</button>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="dashboardModal">
+    <div class="modal-panel">
+      <h2>教师后台数据看板</h2>
+      <div class="data-grid" id="dashboardData"></div>
+      <div class="modal-actions">
+        <button class="reset-btn" id="resetDataBtn">重置数据</button>
+        <button class="close-btn" id="closeDashboardBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 图形知识数据：颜色、名称、立体图形脚印完全对应课件。
+    const SHAPES = {
+      square: { name: "正方形", color: "#ef2d39", solid: "正方体", clue: "四条边都一样长" },
+      rectangle: { name: "长方形", color: "#1677ff", solid: "长方体", clue: "对边相等" },
+      circle: { name: "圆形", color: "#ffd31f", solid: "圆柱", clue: "曲线、无角" },
+      triangle: { name: "三角形", color: "#27c95b", solid: "三棱柱", clue: "三条边、三个角" }
+    };
+
+    const DIALOGS = {
+      start: "紧急任务！‘数学号’空间站遭遇危机！你们愿意加入救援行动吗？",
+      level1: "首先我们要修复导航舱！猜猜立体图形的‘脚印’是什么？",
+      level1Wrong: "再想想，这个立体图形的脚印是什么形状呀？",
+      level1Done: "太棒了！导航舱修好了！原来平面图形都住在立体图形身上呀！",
+      level2: "现在修复能源舱！记住图形的特征，它们就是钥匙哦！",
+      level2Wrong: "再数数它的边和角吧！",
+      level2Done: "能源充满！通讯舱准备解锁！",
+      level3: "最后一步，拼出火箭，让空间站回家！",
+      level3Done: "闯关成功！谢谢小朋友们，我们安全着陆啦！"
+    };
+
+    const MISSIONS = {
+      1: "🚀 任务一：解锁导航舱",
+      2: "⚡ 任务二：解锁能源舱",
+      3: "🛬 任务三：修复着陆舱"
+    };
+
+    const stage = document.getElementById("stage");
+    const speechText = document.getElementById("speechText");
+    const gameTitle = document.getElementById("gameTitle");
+    const progressPill = document.getElementById("progressPill");
+    const hudNote = document.getElementById("hudNote");
+    const missionOverlay = document.getElementById("missionOverlay");
+    const missionTitle = document.getElementById("missionTitle");
+    const countdown = document.getElementById("countdown");
+    const successOverlay = document.getElementById("successOverlay");
+    const successTitle = document.getElementById("successTitle");
+    const successText = document.getElementById("successText");
+    const nextBtn = document.getElementById("nextBtn");
+    const dashboardModal = document.getElementById("dashboardModal");
+    const dashboardData = document.getElementById("dashboardData");
+
+    let audioCtx;
+    let currentLevel = 0;
+    let activeDrag = null;
+    let level1Correct = 0;
+    let level2Correct = 0;
+    let level3Correct = 0;
+    let fallingTimer = null;
+
+    // localStorage 学情数据：人数、每关通过数、每个图形的尝试/错误。
+    const DATA_KEY = "spaceLandingShapeGameStats";
+    const defaultStats = () => ({
+      players: 0,
+      levelPass: { 1: 0, 2: 0, 3: 0 },
+      shapeAttempts: { square: 0, rectangle: 0, circle: 0, triangle: 0 },
+      shapeErrors: { square: 0, rectangle: 0, circle: 0, triangle: 0 }
+    });
+
+    function loadStats() {
+      try {
+        return { ...defaultStats(), ...JSON.parse(localStorage.getItem(DATA_KEY) || "{}") };
+      } catch (error) {
+        return defaultStats();
+      }
+    }
+
+    function saveStats(stats) {
+      localStorage.setItem(DATA_KEY, JSON.stringify(stats));
+    }
+
+    function recordPlayer() {
+      const stats = loadStats();
+      stats.players += 1;
+      saveStats(stats);
+    }
+
+    function recordPass(level) {
+      const stats = loadStats();
+      stats.levelPass[level] += 1;
+      saveStats(stats);
+    }
+
+    function recordAttempt(shape, isCorrect) {
+      const stats = loadStats();
+      stats.shapeAttempts[shape] += 1;
+      if (!isCorrect) stats.shapeErrors[shape] += 1;
+      saveStats(stats);
+    }
+
+    // Web Speech API：Safari/iPad 可能需要用户点击后才允许发声，因此所有语音都在按钮或拖拽后的用户行为链中触发。
+    function speak(text) {
+      speechText.textContent = text;
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "zh-CN";
+      utter.rate = 0.95;
+      utter.pitch = 1.08;
+      window.speechSynthesis.speak(utter);
+    }
+
+    function setupAudio() {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    function tone(freq, start, duration, type = "sine", gainValue = 0.11) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(gainValue, audioCtx.currentTime + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + start + duration);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(audioCtx.currentTime + start);
+      osc.stop(audioCtx.currentTime + start + duration + 0.03);
+    }
+
+    function soundCorrect() {
+      setupAudio();
+      [523, 659, 784].forEach((f, i) => tone(f, i * 0.08, 0.18, "triangle", 0.12));
+    }
+
+    function soundWrong() {
+      setupAudio();
+      [196, 155, 120].forEach((f, i) => tone(f, i * 0.09, 0.22, "sawtooth", 0.07));
+    }
+
+    function soundPass() {
+      setupAudio();
+      [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, i * 0.12, 0.24, "sine", 0.12));
+    }
+
+    function soundVictory() {
+      setupAudio();
+      const melody = [523, 659, 784, 1046, 784, 1046, 1318, 1568];
+      melody.forEach((f, i) => tone(f, i * 0.14, 0.22, i % 2 ? "triangle" : "sine", 0.12));
+    }
+
+    // 动态星空 Canvas 背景。
+    const starCanvas = document.getElementById("stars");
+    const starCtx = starCanvas.getContext("2d");
+    let stars = [];
+
+    function resizeStars() {
+      starCanvas.width = window.innerWidth * devicePixelRatio;
+      starCanvas.height = window.innerHeight * devicePixelRatio;
+      starCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      stars = Array.from({ length: Math.floor(window.innerWidth / 8) }, () => ({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        r: Math.random() * 1.9 + 0.4,
+        s: Math.random() * 0.8 + 0.25,
+        a: Math.random() * Math.PI * 2,
+        c: Math.random() > 0.82 ? "#ffca73" : "#d9f5ff"
+      }));
+    }
+
+    function drawStars() {
+      starCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      for (const star of stars) {
+        star.a += 0.025 * star.s;
+        const alpha = 0.35 + Math.sin(star.a) * 0.32 + 0.33;
+        starCtx.globalAlpha = alpha;
+        starCtx.fillStyle = star.c;
+        starCtx.beginPath();
+        starCtx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        starCtx.fill();
+      }
+      starCtx.globalAlpha = 1;
+      requestAnimationFrame(drawStars);
+    }
+
+    window.addEventListener("resize", resizeStars);
+    resizeStars();
+    drawStars();
+
+    // 屏蔽触摸滚动，保证平板拖拽稳定。
+    ["touchstart", "touchmove", "touchend"].forEach(type => {
+      document.addEventListener(type, event => event.preventDefault(), { passive: false });
+    });
+
+    function setTitle(text) {
+      gameTitle.textContent = text;
+    }
+
+    function stagePoint(event) {
+      const source = event.touches ? event.touches[0] : event.changedTouches ? event.changedTouches[0] : event;
+      const rect = stage.getBoundingClientRect();
+      return {
+        x: source.clientX - rect.left,
+        y: source.clientY - rect.top,
+        clientX: source.clientX,
+        clientY: source.clientY
+      };
+    }
+
+    function centerOf(el) {
+      const a = el.getBoundingClientRect();
+      const b = stage.getBoundingClientRect();
+      return { x: a.left - b.left + a.width / 2, y: a.top - b.top + a.height / 2 };
+    }
+
+    function pointInRect(point, el) {
+      const rect = el.getBoundingClientRect();
+      const stageRect = stage.getBoundingClientRect();
+      return point.x >= rect.left - stageRect.left && point.x <= rect.right - stageRect.left &&
+        point.y >= rect.top - stageRect.top && point.y <= rect.bottom - stageRect.top;
+    }
+
+    function centerInInnerArea(piece, target, innerRatio = .8) {
+      const p = piece.getBoundingClientRect();
+      const t = target.getBoundingClientRect();
+      const centerX = p.left + p.width / 2;
+      const centerY = p.top + p.height / 2;
+      const padX = t.width * (1 - innerRatio) / 2;
+      const padY = t.height * (1 - innerRatio) / 2;
+      return centerX >= t.left + padX && centerX <= t.right - padX &&
+        centerY >= t.top + padY && centerY <= t.bottom - padY;
+    }
+
+    function snapTo(el, target, scale = 1) {
+      const c = centerOf(target);
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      el.style.left = `${c.x - w / 2}px`;
+      el.style.top = `${c.y - h / 2}px`;
+      el.style.transform = `scale(${scale})`;
+    }
+
+    function createShape({ shape, label = true, x = 0, y = 0, w = 132, h = 132, rotate = 0, hint = "", target = "" }) {
+      const el = document.createElement("div");
+      el.className = `draggable shape-${shape}`;
+      el.dataset.shape = shape;
+      el.dataset.target = target || shape;
+      if (target) el.classList.add(`piece-${target}`);
+      el.style.setProperty("--w", `${w}px`);
+      el.style.setProperty("--h", `${h}px`);
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      el.style.transform = `rotate(${rotate}deg)`;
+      el.dataset.originLeft = String(x);
+      el.dataset.originTop = String(y);
+      el.dataset.originTransform = `rotate(${rotate}deg)`;
+      el.innerHTML = `<div class="shape-core"></div>${hint ? `<span class="hint-text">${hint}</span>` : ""}${label ? `<span class="shape-label">${SHAPES[shape].name}</span>` : ""}`;
+      makeDraggable(el);
+      return el;
+    }
+
+    function resetPiece(el) {
+      el.classList.add("shake");
+      setTimeout(() => el.classList.remove("shake"), 430);
+      el.style.left = `${el.dataset.originLeft}px`;
+      el.style.top = `${el.dataset.originTop}px`;
+      el.style.transform = el.dataset.originTransform || "";
+    }
+
+    function makeDraggable(el) {
+      el.addEventListener("mousedown", startDrag);
+      el.addEventListener("touchstart", startDrag, { passive: false });
+    }
+
+    function startDrag(event) {
+      if (event.cancelable) event.preventDefault();
+      const el = event.currentTarget;
+      if (el.classList.contains("locked")) return;
+      setupAudio();
+      const p = stagePoint(event);
+      activeDrag = {
+        el,
+        offsetX: p.x - el.offsetLeft,
+        offsetY: p.y - el.offsetTop
+      };
+      el.classList.add("dragging");
+    }
+
+    function moveDrag(event) {
+      if (!activeDrag) return;
+      if (event.cancelable) event.preventDefault();
+      const p = stagePoint(event);
+      activeDrag.el.style.left = `${p.x - activeDrag.offsetX}px`;
+      activeDrag.el.style.top = `${p.y - activeDrag.offsetY}px`;
+    }
+
+    function endDrag(event) {
+      if (!activeDrag) return;
+      if (event.cancelable) event.preventDefault();
+      const { el } = activeDrag;
+      activeDrag = null;
+      el.classList.remove("dragging");
+      handleDrop(el, stagePoint(event));
+    }
+
+    document.addEventListener("mousemove", moveDrag);
+    document.addEventListener("mouseup", endDrag);
+    document.addEventListener("touchmove", moveDrag, { passive: false });
+    document.addEventListener("touchend", endDrag, { passive: false });
+
+    function handleDrop(el, point) {
+      if (currentLevel === 1) handleLevel1Drop(el, point);
+      if (currentLevel === 2) handleLevel2Drop(el, point);
+      if (currentLevel === 3) handleLevel3Drop(el, point);
+    }
+
+    function showStart() {
+      currentLevel = 0;
+      clearInterval(fallingTimer);
+      missionOverlay.classList.add("hidden");
+      successOverlay.classList.add("hidden");
+      setTitle("太空着陆大闯关");
+      progressPill.textContent = "准备救援";
+      hudNote.textContent = "点击开始救援，跟随团团修复“数学号”空间站。";
+      stage.innerHTML = `
+        <section class="screen">
+          <div class="start-panel">
+            <h1>太空着陆大闯关</h1>
+            <p>一场 AI 赋能的数学探险之旅，跟随宇航员团团，在星际漫游中发现图形的奥秘！</p>
+            <button class="primary-btn" id="startBtn">开始救援</button>
+          </div>
+        </section>
+      `;
+      speak(DIALOGS.start);
+      document.getElementById("startBtn").addEventListener("click", () => {
+        setupAudio();
+        recordPlayer();
+        startLevel(1);
+      });
+    }
+
+    function startLevel(level) {
+      clearInterval(fallingTimer);
+      currentLevel = level;
+      successOverlay.classList.add("hidden");
+      missionOverlay.classList.remove("hidden");
+      missionTitle.textContent = MISSIONS[level];
+      countdown.textContent = "3";
+      setTitle(MISSIONS[level]);
+      progressPill.textContent = `第 ${level} 关`;
+      speak(level === 1 ? DIALOGS.level1 : level === 2 ? DIALOGS.level2 : DIALOGS.level3);
+
+      let n = 3;
+      const timer = setInterval(() => {
+        n -= 1;
+        countdown.textContent = n > 0 ? String(n) : "GO";
+        if (n < 0) {
+          clearInterval(timer);
+          missionOverlay.classList.add("hidden");
+          if (level === 1) renderLevel1();
+          if (level === 2) renderLevel2();
+          if (level === 3) renderLevel3();
+        }
+      }, 1000);
+    }
+
+    function showSuccess(title, text, buttonText, onNext) {
+      successTitle.textContent = title;
+      successText.textContent = text;
+      nextBtn.textContent = buttonText;
+      nextBtn.onclick = onNext;
+      successOverlay.classList.remove("hidden");
+    }
+
+    function renderLevel1() {
+      level1Correct = 0;
+      hudNote.textContent = "把下方平面图形拖到对应立体图形的脚印凹槽中。";
+      const items = [
+        ["square", "cube", "正方体"],
+        ["rectangle", "cuboid", "长方体"],
+        ["circle", "cylinder", "圆柱"],
+        ["triangle", "prism", "三棱柱"]
+      ];
+      stage.innerHTML = `
+        <section class="screen">
+          <div class="solid-row">
+            ${items.map(([shape, solidClass, name]) => `
+              <div class="solid-card">
+                <div class="solid ${solidClass}"></div>
+                <div class="solid-name">${name}</div>
+                <div class="slot" data-accept="${shape}"></div>
+              </div>
+            `).join("")}
+          </div>
+          <div class="piece-bank"></div>
+        </section>
+      `;
+      const order = ["circle", "triangle", "square", "rectangle"];
+      const bank = stage.querySelector(".piece-bank");
+      const bankRect = bank.getBoundingClientRect();
+      const stageRect = stage.getBoundingClientRect();
+      order.forEach((shape, index) => {
+        const w = shape === "rectangle" ? 170 : 126;
+        const h = shape === "rectangle" ? 96 : 126;
+        const x = bankRect.left - stageRect.left + (index + .62) * (bankRect.width / 4) - w / 2;
+        const y = bankRect.top - stageRect.top + bankRect.height / 2 - h / 2 - 8;
+        stage.querySelector(".screen").appendChild(createShape({ shape, x, y, w, h }));
+      });
+    }
+
+    function handleLevel1Drop(el, point) {
+      const slots = [...stage.querySelectorAll(".slot:not(.ok)")];
+      const slot = slots.find(item => pointInRect(point, item));
+      if (!slot) {
+        resetPiece(el);
+        return;
+      }
+      const isCorrect = slot.dataset.accept === el.dataset.shape;
+      recordAttempt(el.dataset.shape, isCorrect);
+      if (isCorrect) {
+        soundCorrect();
+        el.classList.add("locked");
+        slot.classList.add("ok");
+        snapTo(el, slot, .72);
+        level1Correct += 1;
+        progressPill.textContent = `导航舱 ${level1Correct}/4`;
+        if (level1Correct === 4) {
+          recordPass(1);
+          soundPass();
+          speak(DIALOGS.level1Done);
+          setTimeout(() => {
+            showSuccess("揭秘成功！", "导航舱修复中...", "前往第二关", () => startLevel(2));
+          }, 650);
+        }
+      } else {
+        soundWrong();
+        speak(DIALOGS.level1Wrong);
+        resetPiece(el);
+      }
+    }
+
+    function renderLevel2() {
+      level2Correct = 0;
+      hudNote.textContent = "图形会随机旋转。判断图形不能只看方向，要抓住边、角和轮廓。";
+      stage.innerHTML = `
+        <section class="screen">
+          <div class="doors">
+            ${Object.entries(SHAPES).map(([key, item]) => `
+              <div class="door" data-accept="${key}" style="--c:${item.color}">
+                <div class="door-title">${item.name}</div>
+              </div>
+            `).join("")}
+          </div>
+          <div class="class-progress"><div class="class-progress-bar" id="classProgressBar"></div></div>
+          <div class="class-count" id="classCount">已分类 0 / 8</div>
+        </section>
+      `;
+      const list = ["triangle", "square", "circle", "rectangle", "square", "triangle", "rectangle", "circle"];
+      spawnFallingShape(list, 0);
+    }
+
+    function spawnFallingShape(list, index) {
+      if (index >= list.length || currentLevel !== 2) return;
+      const shape = list[index];
+      const w = shape === "rectangle" ? 160 : 120;
+      const h = shape === "rectangle" ? 92 : 120;
+      const x = stage.clientWidth * (0.16 + Math.random() * 0.62);
+      const y = stage.clientHeight * 0.48;
+      const rotate = Math.round(Math.random() * 45) * (Math.random() > .5 ? 1 : -1);
+      const el = createShape({ shape, label: false, x, y, w, h, rotate });
+      el.dataset.index = String(index);
+      stage.querySelector(".screen").appendChild(el);
+
+      // 缓慢“掉落”：未被拖拽时持续向下飘。
+      const fall = setInterval(() => {
+        if (currentLevel !== 2 || el.classList.contains("locked")) {
+          clearInterval(fall);
+          return;
+        }
+        if (!el.classList.contains("dragging")) {
+          const nextTop = el.offsetTop + 1.2;
+          el.style.top = `${Math.min(nextTop, stage.clientHeight - h - 20)}px`;
+        }
+      }, 30);
+      el.dataset.fallTimer = String(fall);
+    }
+
+    function handleLevel2Drop(el, point) {
+      const doors = [...stage.querySelectorAll(".door")];
+      const door = doors.find(item => pointInRect(point, item));
+      if (!door) {
+        resetPiece(el);
+        return;
+      }
+      const isCorrect = door.dataset.accept === el.dataset.shape;
+      recordAttempt(el.dataset.shape, isCorrect);
+      if (isCorrect) {
+        soundCorrect();
+        door.classList.add("flash");
+        setTimeout(() => door.classList.remove("flash"), 480);
+        el.classList.add("locked");
+        snapTo(el, door, .24);
+        el.style.opacity = "0";
+        level2Correct += 1;
+        document.getElementById("classProgressBar").style.width = `${level2Correct / 8 * 100}%`;
+        document.getElementById("classCount").textContent = `已分类 ${level2Correct} / 8`;
+        progressPill.textContent = `能源舱 ${level2Correct}/8`;
+        const nextIndex = Number(el.dataset.index) + 1;
+        if (level2Correct === 8) {
+          recordPass(2);
+          soundPass();
+          speak(DIALOGS.level2Done);
+          burstStars(22);
+          setTimeout(() => {
+            showSuccess("能源充满！", "通讯舱准备解锁...", "前往第三关", () => startLevel(3));
+          }, 900);
+        } else {
+          setTimeout(() => spawnFallingShape(["triangle", "square", "circle", "rectangle", "square", "triangle", "rectangle", "circle"], nextIndex), 380);
+        }
+      } else {
+        soundWrong();
+        speak(DIALOGS.level2Wrong);
+        el.style.left = `${stage.clientWidth * (0.16 + Math.random() * 0.62)}px`;
+        el.style.top = `${stage.clientHeight * 0.46}px`;
+        el.dataset.originLeft = el.style.left.replace("px", "");
+        el.dataset.originTop = el.style.top.replace("px", "");
+        resetPiece(el);
+      }
+    }
+
+    function renderLevel3() {
+      level3Correct = 0;
+      hudNote.textContent = "把左侧 5 个碎片拖进火箭虚线轮廓，中心进入对应区域就会自动卡入。";
+      stage.innerHTML = `
+        <section class="screen">
+          <div class="puzzle-left"></div>
+          <div class="rocket-area">
+            <div class="rocket-guide">
+              <div class="rocket-slot slot-nose" data-accept="nose"></div>
+              <div class="rocket-slot slot-body" data-accept="body"></div>
+              <div class="rocket-slot slot-window" data-accept="window"></div>
+              <div class="rocket-slot slot-wing-left" data-accept="wing-left"></div>
+              <div class="rocket-slot slot-wing-right" data-accept="wing-right"></div>
+            </div>
+            <div class="rocket-colored" id="rocketColored">
+              <div class="rocket-nose"></div>
+              <div class="rocket-body"></div>
+              <div class="rocket-window"></div>
+              <div class="rocket-wing left"></div>
+              <div class="rocket-wing right"></div>
+              <div class="flame"></div>
+            </div>
+          </div>
+        </section>
+      `;
+      const pieces = [
+        { shape: "triangle", target: "nose", hint: "顶部", x: .11, y: .12, w: 150, h: 140 },
+        { shape: "rectangle", target: "body", hint: "机身", x: .16, y: .44, w: 150, h: 260 },
+        { shape: "square", target: "window", hint: "舷窗", x: .07, y: .47, w: 86, h: 86 },
+        { shape: "triangle", target: "wing-left", hint: "左翼", x: .27, y: .19, w: 96, h: 126 },
+        { shape: "triangle", target: "wing-right", hint: "右翼", x: .28, y: .60, w: 96, h: 126 }
+      ];
+      const left = stage.querySelector(".puzzle-left").getBoundingClientRect();
+      const srect = stage.getBoundingClientRect();
+      pieces.forEach(piece => {
+        const x = left.left - srect.left + left.width * piece.x;
+        const y = left.top - srect.top + left.height * piece.y;
+        stage.querySelector(".screen").appendChild(createShape({
+          shape: piece.shape,
+          target: piece.target,
+          hint: piece.hint,
+          label: false,
+          x,
+          y,
+          w: piece.w,
+          h: piece.h,
+          rotate: piece.rotate || 0
+        }));
+      });
+    }
+
+    function handleLevel3Drop(el) {
+      const targets = [...stage.querySelectorAll(`.rocket-slot:not(.ok)`)];
+      const slot = targets.find(item => item.dataset.accept === el.dataset.target && centerInInnerArea(el, item, .8));
+      recordAttempt(el.dataset.shape, Boolean(slot));
+      if (slot) {
+        soundCorrect();
+        slot.classList.add("ok");
+        el.classList.add("locked");
+        snapTo(el, slot, .88);
+        level3Correct += 1;
+        progressPill.textContent = `着陆舱 ${level3Correct}/5`;
+        if (level3Correct === 5) {
+          finishGame();
+        }
+      } else {
+        soundWrong();
+        speak("再观察火箭轮廓，看看这个碎片应该放在哪里。");
+        resetPiece(el);
+      }
+    }
+
+    function finishGame() {
+      recordPass(3);
+      soundVictory();
+      speak(DIALOGS.level3Done);
+      document.getElementById("rocketColored").classList.add("fly");
+      burstConfetti(48);
+      burstStars(36);
+      setTimeout(() => {
+        showSuccess("闯关成功！", "谢谢小朋友们，我们安全着陆啦！", "再玩一次", () => showStart());
+      }, 2200);
+    }
+
+    function burstConfetti(count) {
+      const colors = ["#ff4d5f", "#ffd31f", "#27c95b", "#54c7ff", "#ffffff", "#ff9d28"];
+      for (let i = 0; i < count; i += 1) {
+        const piece = document.createElement("span");
+        piece.className = "confetti";
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.top = `${-10 - Math.random() * 20}px`;
+        piece.style.setProperty("--c", colors[i % colors.length]);
+        piece.style.setProperty("--dx", `${(Math.random() - .5) * 260}px`);
+        piece.style.animationDelay = `${Math.random() * .4}s`;
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 2800);
+      }
+    }
+
+    function burstStars(count) {
+      const colors = ["#ffcf63", "#5cff9c", "#7be2ff", "#ff6f77", "#ffffff"];
+      for (let i = 0; i < count; i += 1) {
+        const piece = document.createElement("span");
+        piece.className = "firework";
+        piece.style.left = `${20 + Math.random() * 60}vw`;
+        piece.style.top = `${20 + Math.random() * 40}vh`;
+        piece.style.setProperty("--c", colors[i % colors.length]);
+        piece.style.setProperty("--dx", `${(Math.random() - .5) * 340}px`);
+        piece.style.setProperty("--dy", `${(Math.random() - .5) * 260}px`);
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 1000);
+      }
+    }
+
+    // 教师后台：通过率按“通过人数 / 点击开始救援人数”显示，错误率按图形尝试统计。
+    function renderDashboard() {
+      const stats = loadStats();
+      const players = Math.max(stats.players, 1);
+      const passRate = level => `${Math.round((stats.levelPass[level] / players) * 100)}%`;
+      let worstKey = "square";
+      let worstRate = -1;
+      Object.keys(SHAPES).forEach(key => {
+        const attempts = stats.shapeAttempts[key] || 0;
+        const errors = stats.shapeErrors[key] || 0;
+        const rate = attempts ? errors / attempts : 0;
+        if (rate > worstRate) {
+          worstRate = rate;
+          worstKey = key;
+        }
+      });
+      const worstText = `${SHAPES[worstKey].name}：错误率${Math.round(worstRate * 100)}%`;
+      dashboardData.innerHTML = `
+        <div class="data-row"><span>当前总闯关人数</span><strong>${stats.players}</strong></div>
+        <div class="data-row"><span>第一关通过率</span><strong>${passRate(1)}</strong></div>
+        <div class="data-row"><span>第二关通过率</span><strong>${passRate(2)}</strong></div>
+        <div class="data-row"><span>第三关通过率</span><strong>${passRate(3)}</strong></div>
+        <div class="data-row"><span>错误率最高的图形</span><strong>${worstText}</strong></div>
+      `;
+      dashboardModal.classList.remove("hidden");
+    }
+
+    document.getElementById("dashboardBtn").addEventListener("click", renderDashboard);
+    document.getElementById("closeDashboardBtn").addEventListener("click", () => dashboardModal.classList.add("hidden"));
+    document.getElementById("resetDataBtn").addEventListener("click", () => {
+      saveStats(defaultStats());
+      renderDashboard();
+    });
+
+    showStart();
+  </script>
+</body>
+</html>
